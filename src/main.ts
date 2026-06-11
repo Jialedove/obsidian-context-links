@@ -1,11 +1,20 @@
-import { App, Editor, EditorPosition, MarkdownFileInfo, MarkdownView, Plugin, PluginManifest, ReferenceCache, TFile } from "obsidian";
+import { App, Editor, EditorPosition, MarkdownFileInfo, MarkdownView, Notice, Plugin, PluginManifest, ReferenceCache, TAbstractFile, TFile } from "obsidian";
+import { EditorView, ViewUpdate } from "@codemirror/view";
 
 import { EditorCursorListener } from "./EditorCursorListener";
 import { addMissingAliasesIntoFile } from "./InjectAlias";
 import { Unregister } from "./ListenerRegistry";
 import { getReferenceCacheFromEditor, setLinkText } from "./MarkdownUtils";
+import {
+	appendUniqueOverrides,
+	freezeExistingLinksInMarkdown,
+	PreserveContextOverride,
+	recordManualPlainLinkOverrides,
+	rewriteLinksAfterRename,
+} from "./PreserveContext";
+import { createPreserveContextEditorExtension } from "./PreserveContextEditorExtension";
 import { equalsPosition, isEditorPositionInPos, moveCursor, moveEditorPosition } from "./PositionUtils";
-import { DEFAULT_SETTINGS, LinksSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, LinksSettings, LinksSettingTab } from "./settings";
 import { getTemplaterPlugin } from "./TemplaterIntegration";
 import { capitalize, isNewFile } from "./Utils";
 import { getOrCreateFileOfLink } from "./VaultUtils";
@@ -72,6 +81,9 @@ export default class LinkWithAliasPlugin extends Plugin {
 	editorCursorListener: EditorCursorListener;
 	linkInfo?: LinkInfo;
 	settings = DEFAULT_SETTINGS;
+	preserveContextOverrides: PreserveContextOverride[] = [];
+	private generatedPreserveContextLinks: PreserveContextOverride[] = [];
+	private applyingEditorChange = false;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
@@ -112,16 +124,94 @@ export default class LinkWithAliasPlugin extends Plugin {
 				this.toggleLinkTextFromSelection(this.getFileFromContext(ctx), editor, editor.getCursor());
 			},
 		});
+		this.addCommand({
+			id: "freeze-existing-links-in-vault",
+			name: "Freeze Existing Links in Vault",
+			icon: "snowflake",
+			callback: () => {
+				this.freezeExistingLinksInVault();
+			},
+		});
+
+		this.registerEditorExtension(createPreserveContextEditorExtension(this));
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				this.handleFileRename(file, oldPath);
+			}),
+		);
 
 		this.addSettingTab(new LinksSettingTab(this.app, this));
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
+		this.preserveContextOverrides = data?.preserveContextOverrides || [];
+		this.generatedPreserveContextLinks = data?.generatedPreserveContextLinks || [];
 	}
 
 	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
+		await this.saveData({
+			...this.settings,
+			preserveContextOverrides: this.preserveContextOverrides,
+			generatedPreserveContextLinks: this.generatedPreserveContextLinks,
+		});
+	}
+
+	isPreserveContextApplyingEditorChange(): boolean {
+		return this.applyingEditorChange;
+	}
+
+	applyCompletedLinkFreeze(view: EditorView, from: number, to: number, replacement: string, surfaceStart: number, surfaceEnd: number): void {
+		if (!this.settings.preserveContext || !this.settings.freezeCompletionLinks) {
+			return;
+		}
+		this.applyingEditorChange = true;
+		try {
+			view.dispatch({
+				changes: { from, to, insert: replacement },
+				selection: { anchor: surfaceStart, head: surfaceEnd },
+			});
+		} finally {
+			this.applyingEditorChange = false;
+		}
+		const file = this.app.workspace.getActiveFile();
+		if (file) {
+			const target = replacement.substring(2, replacement.indexOf("|"));
+			const surfaceText = replacement.substring(replacement.indexOf("|") + 1, replacement.length - 2);
+			this.generatedPreserveContextLinks = appendUniqueOverrides(this.generatedPreserveContextLinks, [
+				{
+					sourcePath: file.path,
+					targetPath: `${target}.md`,
+					surfaceText,
+				},
+			]);
+			this.saveSettings();
+		}
+	}
+
+	trackManualUnfreeze(update: ViewUpdate): void {
+		if (!this.settings.preserveContext || !this.settings.enableUserOverrideRegistry || this.generatedPreserveContextLinks.length === 0) {
+			return;
+		}
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			return;
+		}
+		const before = update.startState.doc.toString();
+		const after = update.state.doc.toString();
+		const next = recordManualPlainLinkOverrides({
+			before,
+			after,
+			sourcePath: file.path,
+			targetPath: "",
+			generated: this.generatedPreserveContextLinks.filter((item) => item.sourcePath === file.path),
+			existing: this.preserveContextOverrides,
+		});
+		if (next.length !== this.preserveContextOverrides.length) {
+			this.preserveContextOverrides = next;
+			this.saveSettings();
+		}
 	}
 
 	private getFileFromContext(ctx: MarkdownView | MarkdownFileInfo): TFile | undefined {
@@ -240,6 +330,69 @@ export default class LinkWithAliasPlugin extends Plugin {
 		}
 	}
 
+	private async handleFileRename(file: TAbstractFile, oldPath: string): Promise<void> {
+		if (!this.settings.preserveContext || !(file instanceof TFile) || file.extension !== "md") {
+			return;
+		}
+		const oldTitle = getBasename(oldPath);
+		const newTitle = file.basename;
+		if (!oldTitle || oldTitle === newTitle) {
+			return;
+		}
+		if (this.settings.addOldTitleAliasOnRename) {
+			await addMissingAliasesIntoFile(this.app.fileManager, file, [oldTitle]);
+		}
+		let changedFiles = 0;
+		let changedLinks = 0;
+		const newGenerated: PreserveContextOverride[] = [];
+		for (const markdownFile of this.app.vault.getMarkdownFiles()) {
+			const result = await this.app.vault.process(markdownFile, (data) => {
+				const rewrite = rewriteLinksAfterRename(data, {
+					oldLinkText: oldTitle,
+					newLinkText: newTitle,
+					freezePlainLinks: this.settings.freezeRenamedPlainLinks,
+					overrides: this.settings.enableUserOverrideRegistry ? this.preserveContextOverrides : [],
+					sourcePath: markdownFile.path,
+					targetPath: file.path,
+				});
+				if (rewrite.changed) {
+					changedFiles++;
+					changedLinks += rewrite.count;
+					newGenerated.push(...rewrite.autoFrozen);
+				}
+				return rewrite.text;
+			});
+			void result;
+		}
+		if (newGenerated.length > 0) {
+			this.generatedPreserveContextLinks = appendUniqueOverrides(this.generatedPreserveContextLinks, newGenerated);
+			await this.saveSettings();
+		}
+		if (changedLinks > 0 || this.settings.addOldTitleAliasOnRename) {
+			new Notice(`Preserve Context: recorded "${oldTitle}" and updated ${changedLinks} link(s) in ${changedFiles} file(s).`);
+		}
+	}
+
+	private async freezeExistingLinksInVault(): Promise<void> {
+		if (!this.settings.preserveContext) {
+			new Notice("Preserve Context is disabled.");
+			return;
+		}
+		let changedFiles = 0;
+		let changedLinks = 0;
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			await this.app.vault.process(file, (data) => {
+				const result = freezeExistingLinksInMarkdown(data);
+				if (result.changed) {
+					changedFiles++;
+					changedLinks += result.count;
+				}
+				return result.text;
+			});
+		}
+		new Notice(`Preserve Context: froze ${changedLinks} link(s) in ${changedFiles} file(s).`);
+	}
+
 	/**
 	 * Handles cache or editor cursor position change on the lastLink
 	 * @param editor
@@ -304,4 +457,9 @@ export default class LinkWithAliasPlugin extends Plugin {
 		}
 		await addMissingAliasesIntoFile(this.app.fileManager, target, [cacheLink.displayText]);
 	}
+}
+
+function getBasename(path: string): string {
+	const name = path.substring(path.lastIndexOf("/") + 1);
+	return name.replace(/\.md$/i, "");
 }
