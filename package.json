@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-link-with-alias",
-	"version": "1.0.11",
+	"version": "1.0.12",
 	"description": "Preserve Obsidian wikilink surface text and keep historical names in aliases",
 	"main": "main.js",
 	"scripts": {

@@ -166,6 +166,23 @@ Preserve Context 只在用户明确表达语境的时机介入。以下场景保
 - `Toggle link display text`：为当前链接添加或移除显示文本。
 - `Freeze Existing Links in Vault`：手动迁移旧知识库中的普通链接。
 
+## 通过 BRAT 安装
+
+这个 fork 目前适合通过 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 作为 beta 插件安装。
+
+1. 先在 Obsidian 中安装并启用 BRAT。
+2. 打开命令面板，执行 `BRAT: Add a beta plugin for testing`。
+3. 输入本仓库地址：
+
+```text
+https://github.com/Jialedove/obsidian-link-with-alias
+```
+
+4. 让 BRAT 从 GitHub Release 安装最新版本。
+5. 安装完成后，在 Obsidian 的 Community plugins 中启用 `Link with Alias: Preserve Context`。
+
+本仓库的 Release 会提供 BRAT/Obsidian 需要的 `main.js`、`manifest.json` 和插件 zip。建议优先使用最新 Release，而不是手动复制源码目录。
+
 ## 设置
 
 - `Preserve Context`：启用或关闭保留语境模式。
