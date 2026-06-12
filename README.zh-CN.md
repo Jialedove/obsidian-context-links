@@ -1,8 +1,8 @@
-# Link with Alias: Preserve Context
+# Obsidian Context Links
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-这是一个基于 Obsidian 社区插件 `Link with Alias` 的 fork。新的设计目标是 **Preserve Context（保留语境）**：让知识库记录的不只是“今天这个概念叫什么”，也记录“当时的自己是如何称呼它的”。
+Obsidian Context Links 是一个基于 Obsidian 社区插件 `Link with Alias` 的 fork。它的设计目标是 **Preserve Context（保留语境）**：让知识库记录的不只是“今天这个概念叫什么”，也记录“当时的自己是如何称呼它的”。
 
 建议用于 GitHub About 的介绍：
 
@@ -60,7 +60,7 @@ Preserve Context 的默认策略是：文件名可以变，正文中的语境表
 
 ### 2. 选中文字建立链接并写入 aliases
 
-保留原插件的核心能力：选中正文中的词，再执行 `Create link with alias`，会生成带显示文本的链接，并把显示文本写入目标笔记的 `aliases`。
+保留原插件的核心能力：选中正文中的词，再执行 `Create context link with alias`，会生成带显示文本的链接，并把显示文本写入目标笔记的 `aliases`。
 
 例如选中：
 
@@ -185,7 +185,7 @@ Preserve Context 只在用户明确表达语境的时机介入。以下场景保
 
 ## 命令
 
-- `Create link with alias`：创建链接，并把显示文本写入目标笔记 aliases。
+- `Create context link with alias`：创建链接，并把显示文本写入目标笔记 aliases。
 - `Create link`：创建链接但不主动写 aliases。
 - `Toggle link display text`：为当前链接添加或移除显示文本。
 - `Freeze Existing Links in Vault`：手动迁移旧知识库中的普通链接。
@@ -199,11 +199,11 @@ Preserve Context 只在用户明确表达语境的时机介入。以下场景保
 3. 输入本仓库地址：
 
 ```text
-https://github.com/Jialedove/obsidian-link-with-alias
+https://github.com/Jialedove/obsidian-context-links
 ```
 
 4. 让 BRAT 从 GitHub Release 安装最新版本。
-5. 安装完成后，在 Obsidian 的 Community plugins 中启用 `Link with Alias: Preserve Context`。
+5. 安装完成后，在 Obsidian 的 Community plugins 中启用 `Obsidian Context Links`。
 
 本仓库的 Release 会提供 BRAT/Obsidian 需要的 `main.js`、`manifest.json` 和插件 zip。建议优先使用最新 Release，而不是手动复制源码目录。
 

@@ -7,13 +7,13 @@ export const LANGUAGE_OPTIONS: Record<Language, string> = {
 
 export const I18N = {
 	en: {
-		"command.createLinkWithAlias": "Create link with alias",
+		"command.createLinkWithAlias": "Create context link with alias",
 		"command.createLink": "Create link",
 		"command.toggleLinkDisplayText": "Toggle link display text",
 		"command.freezeExistingLinksInVault": "Freeze Existing Links in Vault",
 		"notice.preserveContextDisabled": "Preserve Context is disabled.",
-		"notice.freezeExistingLinksInVault": "Preserve Context: froze {changedLinks} link(s) in {changedFiles} file(s).",
-		"notice.renameComplete": "Preserve Context: recorded \"{oldTitle}\" and updated {changedLinks} link(s) in {changedFiles} file(s).",
+		"notice.freezeExistingLinksInVault": "Obsidian Context Links: froze {changedLinks} link(s) in {changedFiles} file(s).",
+		"notice.renameComplete": "Obsidian Context Links: recorded \"{oldTitle}\" and updated {changedLinks} link(s) in {changedFiles} file(s).",
 		"setting.language.name": "Language",
 		"setting.language.desc": "Choose the language used by plugin settings, commands, and notices.",
 		"setting.copyDisplayText.name": "Copy selected text as link file",
@@ -32,13 +32,13 @@ export const I18N = {
 		"setting.enableUserOverrideRegistry.desc": "Remember when a user removes generated display text and do not add it back on later renames.",
 	},
 	zh: {
-		"command.createLinkWithAlias": "创建带别名的链接",
+		"command.createLinkWithAlias": "创建带别名的语境链接",
 		"command.createLink": "创建链接",
 		"command.toggleLinkDisplayText": "切换链接显示文本",
 		"command.freezeExistingLinksInVault": "冻结库中已有链接",
 		"notice.preserveContextDisabled": "Preserve Context 已关闭。",
-		"notice.freezeExistingLinksInVault": "Preserve Context：已在 {changedFiles} 个文件中冻结 {changedLinks} 个链接。",
-		"notice.renameComplete": "Preserve Context：已记录「{oldTitle}」，并在 {changedFiles} 个文件中更新 {changedLinks} 个链接。",
+		"notice.freezeExistingLinksInVault": "Obsidian Context Links：已在 {changedFiles} 个文件中冻结 {changedLinks} 个链接。",
+		"notice.renameComplete": "Obsidian Context Links：已记录「{oldTitle}」，并在 {changedFiles} 个文件中更新 {changedLinks} 个链接。",
 		"setting.language.name": "语言",
 		"setting.language.desc": "选择插件设置、命令和通知使用的语言。",
 		"setting.copyDisplayText.name": "将选中文本作为链接文件名",

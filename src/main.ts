@@ -110,7 +110,7 @@ export default class LinkWithAliasPlugin extends Plugin {
 		this.registeredCommandIds.forEach((commandId) => this.removeCommand(commandId));
 		this.registeredCommandIds = [];
 		this.addCommand({
-			id: "create-link-with-alias",
+			id: "create-context-link-with-alias",
 			name: t(this.settings.language, "command.createLinkWithAlias"),
 			icon: "bracket-glyph",
 			editorCallback: (editor: Editor, ctx) => {
@@ -120,7 +120,7 @@ export default class LinkWithAliasPlugin extends Plugin {
 				});
 			},
 		});
-		this.registeredCommandIds.push("create-link-with-alias");
+		this.registeredCommandIds.push("create-context-link-with-alias");
 		this.addCommand({
 			id: "create-link",
 			name: t(this.settings.language, "command.createLink"),

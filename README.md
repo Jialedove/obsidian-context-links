@@ -1,8 +1,8 @@
-# Link with Alias: Preserve Context
+# Obsidian Context Links
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-This is a fork of the Obsidian community plugin `Link with Alias`. The new direction is **Preserve Context**: a vault should remember not only what a concept is called today, but also how it was named in the writing context where it first appeared.
+Obsidian Context Links is a fork of the Obsidian community plugin `Link with Alias`. Its direction is **Preserve Context**: a vault should remember not only what a concept is called today, but also how it was named in the writing context where it first appeared.
 
 Suggested GitHub About text:
 
@@ -60,7 +60,7 @@ and completion resolves it to `International Chess: Knight`, the plugin keeps wh
 
 ### 2. Create links and write aliases
 
-The original plugin behavior is preserved: select text, run `Create link with alias`, and the plugin creates a display-text link while writing the display text into the target note's `aliases`.
+The original plugin behavior is preserved: select text, run `Create context link with alias`, and the plugin creates a display-text link while writing the display text into the target note's `aliases`.
 
 Selecting:
 
@@ -185,7 +185,7 @@ Preserve Context only intervenes when the user explicitly creates or evolves wik
 
 ## Commands
 
-- `Create link with alias`: create a link and write the display text into target-note aliases.
+- `Create context link with alias`: create a link and write the display text into target-note aliases.
 - `Create link`: create a link without proactively writing aliases.
 - `Toggle link display text`: add or remove display text for the current link.
 - `Freeze Existing Links in Vault`: manually migrate existing plain links.
@@ -199,11 +199,11 @@ This fork is currently intended for installation through [BRAT](https://github.c
 3. Enter this repository URL:
 
 ```text
-https://github.com/Jialedove/obsidian-link-with-alias
+https://github.com/Jialedove/obsidian-context-links
 ```
 
 4. Let BRAT install the latest version from GitHub Releases.
-5. Enable `Link with Alias: Preserve Context` in Obsidian's Community plugins.
+5. Enable `Obsidian Context Links` in Obsidian's Community plugins.
 
 Releases should provide the `main.js`, `manifest.json`, and plugin zip required by BRAT/Obsidian. Prefer the latest Release over manually copying source files.
 

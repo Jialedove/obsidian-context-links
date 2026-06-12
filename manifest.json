@@ -1,7 +1,7 @@
 {
-	"id": "link-with-alias",
-	"name": "Link with Alias: Preserve Context",
-	"version": "1.0.13",
+	"id": "obsidian-context-links",
+	"name": "Obsidian Context Links",
+	"version": "1.0.14",
 	"minAppVersion": "1.1.0",
 	"description": "Preserve wikilink surface text, aliases, and title metadata as note names evolve",
 	"author": "Dove",
