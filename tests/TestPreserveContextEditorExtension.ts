@@ -1,6 +1,13 @@
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { getCompletedLinkAction, getQueryBeforeCursor, handleCompletedLinkAction, shouldHandleCompletedLinkAction } from "../src/PreserveContextEditorExtension";
+import {
+	getCompletedLinkAction,
+	getConfirmedCompletionQuery,
+	getQueryBeforeCursor,
+	handleCompletedLinkAction,
+	isCursorInsideActionLink,
+	shouldHandleCompletedLinkAction,
+} from "../src/PreserveContextEditorExtension";
 
 describe("PreserveContextEditorExtension", () => {
 	it("detects a completed plain link and selects the inserted display text", () => {
@@ -28,6 +35,8 @@ describe("PreserveContextEditorExtension", () => {
 
 		expect(getCompletedLinkAction(state)).toEqual({
 			type: "alias",
+			from: 0,
+			to: 24,
 			target: "Target",
 			surfaceText: "selected text",
 		});
@@ -51,6 +60,14 @@ describe("PreserveContextEditorExtension", () => {
 		expect(getQueryBeforeCursor(state)).toBe("");
 	});
 
+	it("only exposes the completion query after an Enter-confirmed completion", () => {
+		expect(getConfirmedCompletionQuery("typed text", undefined, "input.complete")).toBeUndefined();
+		expect(getConfirmedCompletionQuery("typed text", "typed text", "input.complete")).toBe("typed text");
+		expect(getConfirmedCompletionQuery("typed text", "typed text", undefined)).toBe("typed text");
+		expect(getConfirmedCompletionQuery("typed text", "different", "input.complete")).toBeUndefined();
+		expect(getConfirmedCompletionQuery("typed text", "typed text", "input.type")).toBeUndefined();
+	});
+
 	it("handles Obsidian link completion even without CodeMirror input.complete", () => {
 		const before = EditorState.create({
 			doc: "[[",
@@ -64,6 +81,42 @@ describe("PreserveContextEditorExtension", () => {
 		const action = getCompletedLinkAction(after, query);
 
 		expect(shouldHandleCompletedLinkAction(action, query, undefined)).toBe(true);
+	});
+
+	it("does not use a typed query as display text when completion was not confirmed with Enter", () => {
+		const after = EditorState.create({
+			doc: "[[Existing note]]",
+			selection: { anchor: 17 },
+		});
+		const action = getCompletedLinkAction(after);
+
+		expect(action).toEqual({
+			type: "freeze",
+			from: 0,
+			to: 17,
+			raw: "[[Existing note]]",
+			replacement: "[[Existing note|Existing note]]",
+			surfaceStart: 16,
+			surfaceEnd: 29,
+		});
+	});
+
+	it("uses a typed query as display text when completion was confirmed with Enter", () => {
+		const after = EditorState.create({
+			doc: "[[International chess: Knight]]",
+			selection: { anchor: 29 },
+		});
+		const action = getCompletedLinkAction(after, "马");
+
+		expect(action).toEqual({
+			type: "freeze",
+			from: 0,
+			to: 31,
+			raw: "[[International chess: Knight]]",
+			replacement: "[[International chess: Knight|马]]",
+			surfaceStart: 30,
+			surfaceEnd: 31,
+		});
 	});
 
 	it("does not freeze a wikilink that was closed by normal typing", () => {
@@ -81,7 +134,7 @@ describe("PreserveContextEditorExtension", () => {
 		expect(shouldHandleCompletedLinkAction(action, query, "input.type")).toBe(false);
 	});
 
-	it("handles a manually typed display text as an alias write", () => {
+	it("waits while a manually typed display text is still being edited", () => {
 		const before = EditorState.create({
 			doc: "[[Target|Alias",
 			selection: { anchor: 14 },
@@ -97,8 +150,28 @@ describe("PreserveContextEditorExtension", () => {
 			type: "alias",
 			target: "Target",
 			surfaceText: "Alias",
+			from: 0,
+			to: 16,
 		});
-		expect(shouldHandleCompletedLinkAction(action, query, "input.type")).toBe(true);
+		expect(shouldHandleCompletedLinkAction(action, query, "input.type")).toBe(false);
+	});
+
+	it("handles a manually typed display text after the cursor leaves the wikilink", () => {
+		const state = EditorState.create({
+			doc: "[[Target|Alias]]",
+			selection: { anchor: 16 },
+		});
+		const action = getCompletedLinkAction(state);
+
+		expect(action).toEqual({
+			type: "alias",
+			target: "Target",
+			surfaceText: "Alias",
+			from: 0,
+			to: 16,
+		});
+		expect(isCursorInsideActionLink(action, 17)).toBe(false);
+		expect(shouldHandleCompletedLinkAction(action, undefined, undefined)).toBe(true);
 	});
 
 	it("schedules completed plain link freezing outside the editor update", () => {

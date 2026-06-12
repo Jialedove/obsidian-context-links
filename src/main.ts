@@ -2,7 +2,7 @@ import { App, Editor, EditorPosition, MarkdownFileInfo, MarkdownView, Notice, Pl
 import { EditorView, ViewUpdate } from "@codemirror/view";
 
 import { EditorCursorListener } from "./EditorCursorListener";
-import { addMissingAliasesIntoFile, syncTitleIntoFile } from "./InjectAlias";
+import { addMissingAliasesIntoFile, shouldSkipAutomaticAlias, syncTitleIntoFile } from "./InjectAlias";
 import { t } from "./i18n";
 import { Unregister } from "./ListenerRegistry";
 import { getReferenceCacheFromEditor, setLinkText } from "./MarkdownUtils";
@@ -203,8 +203,12 @@ export default class LinkWithAliasPlugin extends Plugin {
 	}
 
 	addAliasForCompletedLink(target: string, surfaceText: string): void {
+		if (shouldSkipAutomaticAlias(surfaceText) || isAliasSameAsCompletedTarget(target, surfaceText)) {
+			return;
+		}
 		const file = this.app.workspace.getActiveFile();
 		this.addMissingAliasForTarget(target, surfaceText, file?.path);
+		new Notice(t(this.settings.language, "notice.aliasAdded", { alias: surfaceText }));
 	}
 
 	trackManualUnfreeze(update: ViewUpdate): void {
@@ -500,6 +504,25 @@ export default class LinkWithAliasPlugin extends Plugin {
 			},
 		]);
 	}
+}
+
+function isAliasSameAsCompletedTarget(target: string, surfaceText: string): boolean {
+	const normalizedSurface = normalizeAliasComparisonText(surfaceText);
+	if (!normalizedSurface) {
+		return true;
+	}
+	return normalizedSurface === normalizeAliasComparisonText(target) || normalizedSurface === normalizeAliasComparisonText(getLinkTargetBasename(target));
+}
+
+function getLinkTargetBasename(target: string): string {
+	const targetWithoutSubpath = target.split("#")[0].split("^")[0];
+	const slash = targetWithoutSubpath.lastIndexOf("/");
+	const basename = slash >= 0 ? targetWithoutSubpath.substring(slash + 1) : targetWithoutSubpath;
+	return basename.replace(/\.md$/i, "");
+}
+
+function normalizeAliasComparisonText(text: string): string {
+	return text.trim().toLocaleLowerCase();
 }
 
 function getBasename(path: string): string {

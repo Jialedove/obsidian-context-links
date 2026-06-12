@@ -58,6 +58,14 @@ Preserve Context 的默认策略是：文件名可以变，正文中的语境表
 [[已有笔记|已有笔记]]
 ```
 
+如果你输入了搜索词，并用 <kbd>Enter</kbd> 确认某个已有补全候选，输入词会被当作显示文本保留下来：
+
+```md
+[[国际象棋：骑士|马]]
+```
+
+鼠标点击或补全按钮只表示选择目标笔记，不会把正在输入的搜索词当作 alias。若最终目标本来就等于显示文本，例如创建 `[[新笔记|新笔记]]`，插件也不会写入重复 alias。
+
 ### 2. 只有明确写出显示文本时才写 aliases
 
 如果你手动输入了 `|` 和显示文本，插件会把它理解为你有意提供的 alias：
@@ -74,6 +82,8 @@ aliases:
 ```
 
 只有 `[[新笔记]]` 而没有 `|` 时，不会因为创建笔记就自动写 alias。
+
+补全产生的链接只有在显示文本明确不同于目标笔记时才会写 aliases。这样纯新建笔记时，不会把笔记自己的标题污染进 `aliases`。
 
 ### 3. 选中文字建立链接并写入 aliases
 
@@ -227,7 +237,7 @@ https://github.com/Jialedove/obsidian-context-links
 ## 设置
 
 - `Language`：选择设置、命令和通知使用英文或中文。
-- `Freeze completed links`：对已有笔记，开启后把补全结果从 `[[目标]]` 写成 `[[目标|目标]]`；关闭后保持 Obsidian 原生的 `[[目标]]`。
+- `Freeze completed links`：对已有笔记，开启后把补全结果从 `[[目标]]` 写成 `[[目标|目标]]`；当补全由 <kbd>Enter</kbd> 确认时，输入的搜索词可以成为显示文本；关闭后保持 Obsidian 原生的 `[[目标]]`。
 - `Freeze plain links after rename`：A 改名为 B 时，开启后把 `[[A]]` 写成 `[[B|A]]`；关闭后保持 Obsidian 原生的 `[[B]]`。
 - `Add old title as alias`：A 改名为 B 时，开启后把 A 写入 B 的 `aliases`；关闭后不修改 aliases。
 - `Respect manual unfrozen links`：当你把 `[[目标|显示文本]]` 改回 `[[目标]]` 时，开启后会记住这次选择，后续重命名不再自动加回。

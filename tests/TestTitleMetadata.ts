@@ -58,4 +58,32 @@ describe("title metadata", () => {
 
 		expect(frontmatter).toEqual({ aliases: ["Display text"] });
 	});
+
+	it("does not add aliases containing Obsidian's Chinese untitled text", async () => {
+		const frontmatter: Record<string, unknown> = { aliases: ["Manual alias"] };
+		const fileManager = {
+			processFrontMatter: jest.fn(async (_file, callback) => {
+				callback(frontmatter);
+			}),
+		};
+		const file = { basename: "Real title" };
+
+		await addMissingAliasesIntoFile(fileManager as never, file as never, ["未命名 22", "测试未命名草稿", "Useful alias"]);
+
+		expect(frontmatter).toEqual({ aliases: ["Manual alias", "Useful alias"] });
+	});
+
+	it("removes existing aliases containing Obsidian's Chinese untitled text", async () => {
+		const frontmatter: Record<string, unknown> = { aliases: ["未命名 5", "测试未命名草稿", "Manual alias"] };
+		const fileManager = {
+			processFrontMatter: jest.fn(async (_file, callback) => {
+				callback(frontmatter);
+			}),
+		};
+		const file = { basename: "Real title" };
+
+		await addMissingAliasesIntoFile(fileManager as never, file as never, []);
+
+		expect(frontmatter).toEqual({ aliases: ["Manual alias"] });
+	});
 });

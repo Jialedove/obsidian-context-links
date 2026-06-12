@@ -14,11 +14,13 @@ export async function addMissingAliasesIntoFile(fileManager: FileManager, file: 
 		if (typeof frontmatter == "object") {
 			const aliasPropName = aliasPropertyNames.find((name) => frontmatter[name] != null) || aliasPropertyNames[0];
 			const lowercaseBasename = file.basename.toLocaleLowerCase();
-			const existingAliases = toArray<string>(frontmatter[aliasPropName]).filter((alias) => alias.toLocaleLowerCase() !== lowercaseBasename);
+			const existingAliases = toArray<string>(frontmatter[aliasPropName]).filter(
+				(alias) => alias.toLocaleLowerCase() !== lowercaseBasename && !shouldSkipAutomaticAlias(alias),
+			);
 			const toBeAdded: string[] = [];
 			requiredAliases.forEach((requiredAlias) => {
 				const lowercaseRequiredAlias = requiredAlias.toLocaleLowerCase();
-				if (lowercaseRequiredAlias === lowercaseBasename) {
+				if (lowercaseRequiredAlias === lowercaseBasename || shouldSkipAutomaticAlias(requiredAlias)) {
 					return;
 				}
 				if (!existingAliases.some((alias) => alias.toLocaleLowerCase() == lowercaseRequiredAlias)) {
@@ -34,6 +36,11 @@ export async function addMissingAliasesIntoFile(fileManager: FileManager, file: 
 			frontmatter[aliasPropName] = newAliases;
 		}
 	});
+}
+
+export function shouldSkipAutomaticAlias(alias: string): boolean {
+	const normalized = alias.trim().toLocaleLowerCase();
+	return normalized.includes("未命名") || /^untitled(?: \d+)?$/.test(normalized);
 }
 
 export async function syncTitleIntoFile(fileManager: FileManager, file: TFile): Promise<void> {

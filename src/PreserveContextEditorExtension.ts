@@ -7,17 +7,35 @@ import { completePlainLink, getCompletedLinkAlias } from "./PreserveContext";
 export function createPreserveContextEditorExtension(plugin: LinkWithAliasPlugin) {
 	return ViewPlugin.fromClass(
 		class {
+			private pendingAlias?: AliasLinkAction;
+			pendingEnterCompletionQuery?: string;
+
 			update(update: ViewUpdate) {
-				if (!update.docChanged || plugin.isPreserveContextApplyingEditorChange()) {
+				if ((!update.docChanged && !update.selectionSet) || plugin.isPreserveContextApplyingEditorChange()) {
 					return;
 				}
 				const userEvent = update.transactions.map((tr) => tr.annotation(Transaction.userEvent)).find(Boolean);
 				if (userEvent === "input.paste" || userEvent === "delete.selection") {
+					this.pendingAlias = undefined;
 					return;
 				}
-				const query = getQueryBeforeCursor(update.startState);
+				if (this.pendingAlias && shouldCommitPendingAlias(update.state, this.pendingAlias)) {
+					handleCompletedLinkAction(plugin, update.view, this.pendingAlias);
+					this.pendingAlias = undefined;
+					return;
+				}
+				if (!update.docChanged) {
+					return;
+				}
+				const startQuery = getQueryBeforeCursor(update.startState);
+				const query = getConfirmedCompletionQuery(startQuery, this.pendingEnterCompletionQuery, userEvent);
+				this.pendingEnterCompletionQuery = undefined;
 				const action = getCompletedLinkAction(update.state, query);
-				if (!shouldHandleCompletedLinkAction(action, query, userEvent)) {
+				if (!shouldHandleCompletedLinkAction(action, startQuery, userEvent)) {
+					if (action?.type === "alias") {
+						this.pendingAlias = action;
+						return;
+					}
 					plugin.trackManualUnfreeze(update);
 					return;
 				}
@@ -26,6 +44,16 @@ export function createPreserveContextEditorExtension(plugin: LinkWithAliasPlugin
 				}
 				handleCompletedLinkAction(plugin, update.view, action);
 			}
+		},
+		{
+			eventHandlers: {
+				keydown(event: KeyboardEvent, view: EditorView) {
+					if (event.key !== "Enter") {
+						return;
+					}
+					this.pendingEnterCompletionQuery = getQueryBeforeCursor(view.state);
+				},
+			},
 		},
 	);
 }
@@ -42,6 +70,8 @@ interface FrozenLinkAction {
 
 interface AliasLinkAction {
 	type: "alias";
+	from: number;
+	to: number;
 	target: string;
 	surfaceText: string;
 }
@@ -81,13 +111,27 @@ export function shouldHandleCompletedLinkAction(
 	if (userEvent === "input.complete") {
 		return true;
 	}
-	if (action.type === "alias") {
-		return true;
-	}
 	if (userEvent?.startsWith("input.type")) {
 		return false;
 	}
+	if (action.type === "alias") {
+		return true;
+	}
 	return query != null;
+}
+
+export function getConfirmedCompletionQuery(
+	startQuery: string | undefined,
+	pendingEnterCompletionQuery: string | undefined,
+	userEvent: string | undefined,
+): string | undefined {
+	if (userEvent != null && userEvent !== "input.complete") {
+		return;
+	}
+	if (startQuery == null || pendingEnterCompletionQuery == null || startQuery !== pendingEnterCompletionQuery) {
+		return;
+	}
+	return startQuery;
 }
 
 export function getCompletedLinkAction(state: EditorState, query?: string): CompletedLinkAction | undefined {
@@ -111,9 +155,25 @@ export function getCompletedLinkAction(state: EditorState, query?: string): Comp
 	}
 	const alias = getCompletedLinkAlias(raw);
 	if (alias) {
-		return { type: "alias", ...alias };
+		return { type: "alias", from, to, ...alias };
 	}
 	return;
+}
+
+export function isCursorInsideActionLink(action: CompletedLinkAction | undefined, cursor: number): boolean {
+	if (!action) {
+		return false;
+	}
+	return cursor >= action.from && cursor <= action.to;
+}
+
+function shouldCommitPendingAlias(state: EditorState, action: AliasLinkAction): boolean {
+	if (isCursorInsideActionLink(action, state.selection.main.head)) {
+		return false;
+	}
+	const raw = state.doc.sliceString(action.from, action.to);
+	const alias = getCompletedLinkAlias(raw);
+	return alias?.target === action.target && alias.surfaceText === action.surfaceText;
 }
 
 export function getQueryBeforeCursor(state: EditorState): string | undefined {

@@ -58,6 +58,14 @@ When the setting is enabled, completion writes:
 [[Existing note|Existing note]]
 ```
 
+If you typed a search phrase and confirm an existing completion candidate with <kbd>Enter</kbd>, the typed phrase is treated as the display text:
+
+```md
+[[International Chess: Knight|horse]]
+```
+
+Mouse or button-based completion only selects the target note. It does not treat the typed search phrase as an alias. If the completed target already matches the visible text, such as creating `[[New note|New note]]`, the plugin does not write a redundant alias.
+
 ### 2. Write aliases only from explicit display text
 
 If you manually type a display text with `|`, the plugin treats it as an intentional alias:
@@ -74,6 +82,8 @@ aliases:
 ```
 
 Plain links without `|` do not write aliases just because they were created.
+
+Completed links only write aliases when the display text is clearly different from the target note. This keeps pure new-note creation from polluting `aliases` with the note's own title.
 
 ### 3. Create links from selected text
 
@@ -227,7 +237,7 @@ Releases should provide the `main.js`, `manifest.json`, and plugin zip required 
 ## Settings
 
 - `Language`: choose English or Chinese for settings, commands, and notices.
-- `Freeze completed links`: for existing notes, turn completion from `[[Target]]` into `[[Target|Target]]`; off keeps Obsidian's native `[[Target]]`.
+- `Freeze completed links`: for existing notes, turn completion from `[[Target]]` into `[[Target|Target]]`; when completion is confirmed with <kbd>Enter</kbd>, a typed search phrase can become the display text. Off keeps Obsidian's native `[[Target]]`.
 - `Freeze plain links after rename`: when `A` is renamed to `B`, on converts `[[A]]` into `[[B|A]]`; off keeps Obsidian's native `[[B]]`.
 - `Add old title as alias`: when `A` is renamed to `B`, on writes `A` into `B`'s `aliases`; off leaves aliases unchanged.
 - `Respect manual unfrozen links`: when you change `[[Target|Text]]` back to `[[Target]]`, on remembers that choice for later renames.
